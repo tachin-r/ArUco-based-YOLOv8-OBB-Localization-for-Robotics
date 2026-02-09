@@ -38,7 +38,8 @@ We couldn't rely on public datasets for our specific needs, so we built our own.
 
 ### 2. The Tooling Dilemma: Roboflow vs. CVAT
 We initially tried **Roboflow** for labeling. While great for standard detection, we found its polygon tool for OBB labeling was often imprecise—human errors led to "wobbly" polygons that confused the model.
-
+![Roboflow interface: Roboflow interface](asset/Roboflow.png)
+![CVAT interface: CVAT interface](asset/CVAT_rotate_box.png)
 We switched to **CVAT (Computer Vision Annotation Tool)**. Why?
 *   CVAT has a **Rotated Bounding Box** tool.
 *   This ensures labels are perfectly rectangular and symmetric, just rotated.
