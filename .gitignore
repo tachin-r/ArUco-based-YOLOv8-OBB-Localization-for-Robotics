@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# YOLOv8
+runs/
+
+# Large model files (optional, remove if you want to commit models)
+*.pt
+*.onnx
+
+
+# System
+.DS_Store
+Thumbs.db
+
+# Large Datasets & Images (Do not commit)
+Trash_Dataset_*/
+Photo/
+XML_file/
+merge_xml_file/
+challenge/
+my_web/
+result_*.jpg
+prediction_result.jpg
+
+# Large Notebooks (Keep only the clean one)
+ArUco_Yolov8_OBB.ipynb
+ArUco_Yolov8_OBB_embedded2.ipynb

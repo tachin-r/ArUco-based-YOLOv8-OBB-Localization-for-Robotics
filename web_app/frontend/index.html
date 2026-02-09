@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>G7 Yolo OBB</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .main-container {
+            max-width: 1300px;
+            width: 100%;
+        }
+
+        .flex-container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .card {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            flex: 1;
+            min-width: 350px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        video,
+        img,
+        canvas {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #000;
+        }
+
+        #video {
+            display: none;
+        }
+
+        .controls,
+        .settings-form {
+            margin: 15px 0;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        button {
+            font-size: 1em;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            border: 1px solid;
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        .btn-start {
+            border-color: #28a745;
+            background-color: #28a745;
+            color: white;
+        }
+
+        .btn-stop {
+            border-color: #dc3545;
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .btn-recal {
+            border-color: #ffc107;
+            background-color: #ffc107;
+            color: black;
+        }
+
+        .btn-save {
+            border-color: #007bff;
+            background-color: #007bff;
+            color: white;
+        }
+
+        button:disabled {
+            background-color: #aaa;
+            border-color: #aaa;
+            cursor: not-allowed;
+        }
+
+        #status {
+            text-align: center;
+            padding: 10px;
+            font-size: 1.2em;
+            font-weight: bold;
+            min-height: 25px;
+            color: #0056b3;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        input[type=number] {
+            padding: 8px;
+            width: 100px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="main-container">
+        <h1>G7 Yolo OBB</h1>
+        <div id="status">Please set dimensions and start the flow.</div>
+
+        <div class="card">
+            <h2>Settings</h2>
+            <div class="settings-form">
+                <label for="widthInput">Width (mm):</label>
+                <input type="number" id="widthInput" value="650">
+                <label for="lengthInput">Length (mm):</label>
+                <input type="number" id="lengthInput" value="813">
+                <button id="saveSettingsButton" class="btn-save">Save Settings</button>
+            </div>
+        </div>
+
+        <div class="flex-container">
+            <div class="card">
+                <h2>Live Camera & Controls</h2>
+                <video id="video" playsinline autoplay muted></video>
+                <canvas id="liveCanvas"></canvas>
+                <div class="controls">
+                    <button id="startButton" class="btn-start">Start Camera</button>
+                    <button id="stopButton" class="btn-stop" disabled>Stop Camera</button>
+                    <button id="recalButton" class="btn-recal" disabled>Force Recalibrate</button>
+                </div>
+            </div>
+            <div class="card">
+                <h2>Processed Result</h2>
+                <div id="resultContainer">
+                    <p>Results will be shown here after calibration.</p>
+                    <img id="resultImage" style="display:none;" />
+                    <div id="resultsTableContainer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API Endpoints
+    const AUTO_PROCESS_API = '/backend/auto_process';
+    const SET_DIMENSIONS_API = '/backend/set_dimensions';
+    const RESET_CALIBRATION_API = '/backend/reset_calibration';
+
+    // DOM Elements
+    const video = document.getElementById('video');
+    const liveCanvas = document.getElementById('liveCanvas');
+    const ctx = liveCanvas.getContext('2d');
+    const startButton = document.getElementById('startButton');
+    const stopButton = document.getElementById('stopButton');
+    const recalButton = document.getElementById('recalButton');
+    const saveSettingsButton = document.getElementById('saveSettingsButton');
+    const widthInput = document.getElementById('widthInput');
+    const lengthInput = document.getElementById('lengthInput');
+    const statusDiv = document.getElementById('status');
+    const resultImage = document.getElementById('resultImage');
+    const tableContainer = document.getElementById('resultsTableContainer');
+    const resultContainer = document.getElementById('resultContainer');
+    
+    let videoStream = null;
+    let renderLoopId = null;
+    let isFlowRunning = false;
+    let isProcessing = false;
+
+    // --- Settings, Controls, Main Loop ---
+    saveSettingsButton.onclick = async () => {
+        const width = widthInput.value;
+        const length = lengthInput.value;
+        statusDiv.textContent = 'Saving new dimensions...';
+        try {
+            const response = await fetch(SET_DIMENSIONS_API, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ width, length })
+            });
+            const data = await response.json();
+            if(data.status === 'success') {
+                statusDiv.textContent = 'Dimensions saved! Please restart the flow if it is running.';
+            } else {
+                 statusDiv.textContent = 'Failed to save dimensions.';
+            }
+        } catch (error) {
+            statusDiv.textContent = 'Error connecting to server.';
+        }
+    };
+
+    startButton.onclick = async () => {
+        if (videoStream) return;
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } });
+            videoStream = stream; 
+            video.srcObject = stream;
+            await new Promise(resolve => video.onloadedmetadata = resolve);
+            video.play();
+            liveCanvas.width = video.videoWidth; 
+            liveCanvas.height = video.videoHeight;
+            
+            startButton.textContent = "Start Auto Flow";
+            startButton.disabled = true; 
+            stopButton.disabled = false; 
+            recalButton.disabled = false;
+            saveSettingsButton.disabled = true;
+            
+            startRenderLoop();
+            isFlowRunning = true;
+            runAutoProcessLoop();
+            
+            statusDiv.textContent = 'Camera Started. Searching for markers...';
+        } catch (err) { 
+            statusDiv.textContent = `Error: Cannot access camera. ${err}`; 
+        }
+    };
+
+    stopButton.onclick = () => {
+        isFlowRunning = false;
+        if (videoStream) {
+            videoStream.getTracks().forEach(track => track.stop());
+        }
+        videoStream = null;
+        cancelAnimationFrame(renderLoopId);
+        
+        ctx.clearRect(0, 0, liveCanvas.width, liveCanvas.height);
+        startButton.textContent = "Start Camera";
+        startButton.disabled = false; 
+        stopButton.disabled = true; 
+        recalButton.disabled = true;
+        saveSettingsButton.disabled = false;
+        
+        statusDiv.textContent = 'Flow stopped. You can now change settings.';
+        resultContainer.querySelector('p').style.display = 'block';
+        resultImage.style.display = 'none';
+        tableContainer.innerHTML = '';
+    };
+
+    recalButton.onclick = async () => {
+        statusDiv.textContent = 'Forcing recalibration...';
+        try {
+            await fetch(RESET_CALIBRATION_API, { method: 'POST' });
+        } catch(error) {
+            console.error('Failed to send reset command', error);
+        }
+    };
+
+    async function runAutoProcessLoop() {
+        if (!isFlowRunning) return;
+        if (isProcessing) {
+            setTimeout(runAutoProcessLoop, 1500);
+            return;
+        }
+        if (videoStream) {
+            isProcessing = true;
+            const blob = await captureFrameAsBlob();
+            const formData = new FormData();
+            formData.append('file', blob, 'auto_process_frame.jpg');
+            try {
+                const response = await fetch(AUTO_PROCESS_API, { method: 'POST', body: formData });
+                const data = await response.json();
+                switch (data.status) {
+                    case 'success':
+                        if(isProcessing) statusDiv.textContent = ' Processing...';
+                        resultImage.src = data.result_image_url + `?t=${new Date().getTime()}`;
+                        resultImage.style.display = 'block';
+                        updateResultsTable(data.detections);
+                        resultContainer.querySelector('p').style.display = 'none';
+                        break;
+                    case 'pending_calibration':
+                        statusDiv.textContent = data.message;
+                        resultImage.style.display = 'none';
+                        tableContainer.innerHTML = '';
+                        resultContainer.querySelector('p').style.display = 'block';
+                        break;
+                    case 'error':
+                        statusDiv.textContent = 'Error: ' + data.message;
+                        break;
+                }
+            } catch (error) {
+                console.error("Auto process failed:", error);
+                statusDiv.textContent = 'Connection to server failed.';
+            } finally {
+                isProcessing = false;
+            }
+        }
+        setTimeout(runAutoProcessLoop, 1500);
+    }
+    
+    // --- Helper Functions ---
+    function startRenderLoop() {
+        if (!videoStream) return; 
+        ctx.drawImage(video, 0, 0, liveCanvas.width, liveCanvas.height);
+        renderLoopId = requestAnimationFrame(startRenderLoop);
+    }
+
+    function captureFrameAsBlob() {
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = video.videoWidth;
+        tempCanvas.height = video.videoHeight;
+        tempCanvas.getContext('2d').drawImage(video, 0, 0);
+        return new Promise(resolve => tempCanvas.toBlob(resolve, 'image/jpeg'));
+    }
+
+    function updateResultsTable(detections) {
+        if (!detections || detections.length === 0) {
+            tableContainer.innerHTML = '<p>No objects detected in this frame.</p>';
+            return;
+        }
+        let tableHTML = `<table><thead><tr><th>Class</th><th>Conf</th><th>Center (mm)</th><th>Size (mm)</th><th>Rotation (deg)</th></tr></thead><tbody>`;
+        detections.forEach((det) => {
+            const angleDeg = (det.rotation_rad * 180 / Math.PI).toFixed(1);
+            tableHTML += `<tr><td>${det.class_name}</td><td>${(det.confidence * 100).toFixed(1)}%</td><td>${det.center_mm}</td><td>${det.dimensions_mm}</td><td>${angleDeg}</td></tr>`;
+        });
+        tableHTML += `</tbody></table>`;
+        tableContainer.innerHTML = tableHTML;
+    }
+    </script>
+</body>
+
+</html>

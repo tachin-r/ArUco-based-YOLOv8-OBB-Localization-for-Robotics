@@ -1,0 +1,9 @@
+RewriteEngine On
+
+# กฎข้อที่ 1: สำหรับ API (เหมือนเดิม)
+RewriteRule ^backend/(.*)$ http://127.0.0.1:1600/$1 [P,L]
+
+# กฎข้อที่ 2: สำหรับไฟล์รูปภาพในโฟลเดอร์ static (เพิ่มเข้ามา)
+RewriteRule ^static/(.*)$ http://127.0.0.1:1600/static/$1 [P,L]
+
+RewriteRule ^api/(.*)$ http://localhost:1600/$1 [P,L]
