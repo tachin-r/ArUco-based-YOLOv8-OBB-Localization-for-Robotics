@@ -100,6 +100,7 @@ Our model (`s_80_20_run`) successfully learned to distinguish and orient bottles
 ## 🌐 Real-World Integration
 
 To demonstrate the practical application of this system, we built a **Web Application Interface** that connects to the model in real-time.
+https://g7tuesm.consolutechcloud.com/aruco_real.html
 
 ![Web App Interface: Settings, Live Feed, and Processed Result](asset/web_app_demo.png)
 
