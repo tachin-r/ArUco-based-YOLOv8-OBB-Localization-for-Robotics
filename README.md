@@ -12,7 +12,7 @@ A standard object detector might tell you "There is a bottle here," but if your 
 Traditional object detection models (like standard YOLO) output bounding boxes that are always upright (axis-aligned). But in the real world, objects—especially trash on a conveyor belt or parts in a bin—can be in any orientation.
 
 ![Comparison: Standard YOLO vs YOLO-OBB](asset/yolo_comparison.png)
-*(Side-by-side comparison reducing standard box vs OBB box)*
+*(standard box vs OBB box)*
 
 For a robot to successfully pick up an object, it needs two critical pieces of information that standard models miss:
 1.  **Precise Real-World Coordinates (x, y)**: Not just pixels on a screen.
@@ -22,7 +22,6 @@ For a robot to successfully pick up an object, it needs two critical pieces of i
 We developed a **Hybrid Computer Vision System** that combines the strengths of two powerful technologies:
 
 ![Solution Visual: YOLO + ArUco Hybrid Concept](asset/solution_concept.png)
-*(A diagram showing YOLO detecting the object and ArUco providing the reference frame)*
 
 *   **YOLOv8-OBB (Oriented Bounding Box)**: Instead of standard boxes, we use the OBB version of YOLOv8. This allows the model to learn and predict the rotation of objects directly.
 *   **ArUco Markers**: We use these fiducial markers to create a "Bird's Eye View" transformation. This effectively turns our camera into a metric measuring device, translating pixel coordinates into real-world millimeters.
