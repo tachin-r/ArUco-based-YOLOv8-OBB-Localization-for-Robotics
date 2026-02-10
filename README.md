@@ -12,7 +12,7 @@ A standard object detector might tell you "There is a bottle here," but if your 
 Traditional object detection models (like standard YOLO) output bounding boxes that are always upright (axis-aligned). But in the real world, objects—especially trash on a conveyor belt or parts in a bin—can be in any orientation.
 
 ![Comparison: Standard YOLO vs YOLO-OBB](asset/yolo_comparison.png)
-*(standard box vs OBB box)*
+*(standard box vs OBB box ref : https://github.com/ultralytics/ultralytics/issues/624 )*
 
 For a robot to successfully pick up an object, it needs two critical pieces of information that standard models miss:
 1.  **Precise Real-World Coordinates (x, y)**: Not just pixels on a screen.
